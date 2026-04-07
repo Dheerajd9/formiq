@@ -11,6 +11,12 @@ export interface LogSet {
   completed: number;
 }
 
+export interface PrevSet {
+  set_number: number;
+  reps: number;
+  weight_kg: number;
+}
+
 export interface LogExercise {
   id: number;
   log_id: number;
@@ -18,6 +24,8 @@ export interface LogExercise {
   completed: number;
   exercise: Exercise | undefined;
   sets: LogSet[];
+  prevSets: PrevSet[];
+  personalRecord: { weight_kg: number; reps: number } | null;
 }
 
 export interface WorkoutLog {
@@ -57,7 +65,33 @@ export function useWorkoutLog(date: string = today()) {
         'SELECT * FROM log_sets WHERE log_exercise_id = ? ORDER BY set_number',
         [e.id]
       );
-      return { ...e, exercise: EXERCISES.find((ex) => ex.id === e.exercise_id), sets };
+
+      // Fetch last completed session's sets for this exercise (for "Last:" reference)
+      const prevSets = db.getAllSync<PrevSet>(
+        `SELECT ls.set_number, ls.reps, ls.weight_kg
+         FROM log_sets ls
+         JOIN log_exercises le ON le.id = ls.log_exercise_id
+         JOIN workout_logs wl ON wl.id = le.log_id
+         WHERE le.exercise_id = ? AND wl.completed = 1 AND wl.date < ?
+           AND ls.completed = 1
+         ORDER BY wl.date DESC, ls.set_number ASC
+         LIMIT 6`,
+        [e.exercise_id, date]
+      );
+
+      // Fetch personal record
+      const personalRecord = db.getFirstSync<{ weight_kg: number; reps: number }>(
+        'SELECT weight_kg, reps FROM personal_records WHERE exercise_id = ?',
+        [e.exercise_id]
+      );
+
+      return {
+        ...e,
+        exercise: EXERCISES.find((ex) => ex.id === e.exercise_id),
+        sets,
+        prevSets,
+        personalRecord: personalRecord ?? null,
+      };
     });
 
     setLog({ ...rawLog, exercises });
@@ -83,10 +117,22 @@ export function useWorkoutLog(date: string = today()) {
       [logId, exerciseId]
     )?.id;
     if (logExId) {
+      // Get last session weights to pre-fill
+      const lastSets = db.getAllSync<{ reps: number; weight_kg: number }>(
+        `SELECT ls.reps, ls.weight_kg
+         FROM log_sets ls
+         JOIN log_exercises le ON le.id = ls.log_exercise_id
+         JOIN workout_logs wl ON wl.id = le.log_id
+         WHERE le.exercise_id = ? AND wl.completed = 1
+         ORDER BY wl.date DESC, ls.set_number ASC
+         LIMIT ?`,
+        [exerciseId, sets]
+      );
       for (let i = 1; i <= sets; i++) {
+        const lastSet = lastSets[i - 1];
         db.runSync(
-          'INSERT INTO log_sets (log_exercise_id, set_number, reps, weight_kg) VALUES (?, ?, ?, 0)',
-          [logExId, i, reps]
+          'INSERT INTO log_sets (log_exercise_id, set_number, reps, weight_kg) VALUES (?, ?, ?, ?)',
+          [logExId, i, lastSet?.reps ?? reps, lastSet?.weight_kg ?? 0]
         );
       }
     }

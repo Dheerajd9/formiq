@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   SafeAreaView, Modal, Alert,
@@ -9,13 +9,38 @@ import { usePlan } from '../../hooks/usePlan';
 import { useWorkoutLog } from '../../hooks/useWorkoutLog';
 import { useWhatToday } from '../../hooks/useWhatToday';
 import { useRecovery } from '../../hooks/useRecovery';
-import { today } from '../../db/client';
-import { LAZY_DAY_EXERCISES, EXERCISES, Exercise } from '../../constants/exercises';
+import { today, getDB } from '../../db/client';
+import { LAZY_DAY_EXERCISES, Exercise } from '../../constants/exercises';
 import SetLogger from '../../components/SetLogger';
 import RecoveryVisualizer from '../../components/RecoveryVisualizer';
 import ExerciseCard from '../../components/ExerciseCard';
+import RestTimer from '../../components/RestTimer';
 
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+function getStreak(): number {
+  try {
+    const db = getDB();
+    const rows = db.getAllSync<{ date: string }>(
+      `SELECT date FROM workout_logs WHERE completed = 1 ORDER BY date DESC LIMIT 60`
+    );
+    if (!rows.length) return 0;
+    let streak = 0;
+    let cursor = new Date();
+    cursor.setHours(0, 0, 0, 0);
+    for (const row of rows) {
+      const d = new Date(row.date);
+      d.setHours(0, 0, 0, 0);
+      const diff = Math.round((cursor.getTime() - d.getTime()) / 86400000);
+      if (diff > 1) break;
+      streak++;
+      cursor = d;
+    }
+    return streak;
+  } catch {
+    return 0;
+  }
+}
 
 export default function HomeScreen() {
   const { todayPlan, activePlan } = usePlan();
@@ -26,14 +51,37 @@ export default function HomeScreen() {
   const [showSuggestion, setShowSuggestion] = useState(false);
   const [suggestion, setSuggestion] = useState<ReturnType<typeof suggest> | null>(null);
   const [showLazyDay, setShowLazyDay] = useState(false);
-  const [startTime] = useState(Date.now());
+  const [showRestTimer, setShowRestTimer] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const startTimeRef = useRef(Date.now());
 
   const todayStr = today();
   const todayDate = new Date();
   const dayName = DAY_NAMES[todayDate.getDay() === 0 ? 6 : todayDate.getDay() - 1];
 
+  // Live workout timer
+  useEffect(() => {
+    if (!log || log.completed === 1) return;
+    const t = setInterval(() => setElapsedSeconds(Math.floor((Date.now() - startTimeRef.current) / 1000)), 1000);
+    return () => clearInterval(t);
+  }, [log?.id, log?.completed]);
+
+  // Streak on mount
+  useEffect(() => {
+    setStreak(getStreak());
+  }, [log?.completed]);
+
+  const elapsed = (() => {
+    const m = Math.floor(elapsedSeconds / 60);
+    const s = elapsedSeconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  })();
+
   const handleStartWorkout = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    startTimeRef.current = Date.now();
+    setElapsedSeconds(0);
     startWorkout(todayPlan?.workout_type ?? 'gym');
   };
 
@@ -57,19 +105,22 @@ export default function HomeScreen() {
 
   const handleStartLazy = () => {
     setShowLazyDay(false);
+    startTimeRef.current = Date.now();
+    setElapsedSeconds(0);
     startWorkout('lazy_day');
-    if (!log) return;
-    setTimeout(() => {
-      refresh();
-    }, 200);
+    setTimeout(() => refresh(), 200);
   };
 
   const handleComplete = () => {
     if (!log) return;
-    const mins = Math.round((Date.now() - startTime) / 60000);
-    completeWorkout(log.id, Math.max(1, mins));
+    const mins = Math.max(1, Math.round(elapsedSeconds / 60));
+    completeWorkout(log.id, mins);
+    setStreak(getStreak());
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert('Workout Complete!', `Great job! You trained for ~${Math.max(1, mins)} minutes.`);
+    Alert.alert(
+      '🎉 Workout Complete!',
+      `${log.exercises.length} exercises · ${mins} min${streak > 0 ? `\n🔥 ${streak + 1}-day streak!` : ''}`
+    );
   };
 
   const completedCount = log?.exercises.filter((e) => e.completed === 1).length ?? 0;
@@ -85,19 +136,27 @@ export default function HomeScreen() {
             <Text style={styles.greeting}>Good {getTimeOfDay()}</Text>
             <Text style={styles.date}>{dayName}, {todayDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}</Text>
           </View>
-          {log?.completed === 1 && (
-            <View style={styles.completedBadge}>
-              <Text style={styles.completedBadgeText}>Done ✓</Text>
-            </View>
-          )}
+          <View style={styles.headerRight}>
+            {streak > 0 && (
+              <View style={styles.streakBadge}>
+                <Text style={styles.streakFire}>🔥</Text>
+                <Text style={styles.streakNum}>{streak}</Text>
+              </View>
+            )}
+            {log?.completed === 1 && (
+              <View style={styles.completedBadge}>
+                <Text style={styles.completedBadgeText}>Done ✓</Text>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* What Today? button */}
         <TouchableOpacity style={styles.whatTodayBtn} onPress={handleWhatToday}>
           <Text style={styles.whatTodayEmoji}>🧠</Text>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.whatTodayTitle}>What should I do today?</Text>
-            <Text style={styles.whatTodaySubtitle}>AI suggests based on your history</Text>
+            <Text style={styles.whatTodaySubtitle}>Smart suggestion based on recovery</Text>
           </View>
           <Text style={styles.whatTodayArrow}>›</Text>
         </TouchableOpacity>
@@ -106,17 +165,17 @@ export default function HomeScreen() {
         {todayPlan ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Today's Plan</Text>
-            <Text style={styles.planName}>{activePlan?.name}</Text>
+            <Text style={styles.planName}>{activePlan?.name} · {todayPlan.exercises.length} exercises</Text>
             {!log && (
               <TouchableOpacity style={styles.startBtn} onPress={handleStartWorkout}>
-                <Text style={styles.startBtnText}>Start Workout</Text>
+                <Text style={styles.startBtnText}>▶  Start Workout</Text>
               </TouchableOpacity>
             )}
           </View>
         ) : (
           <View style={styles.noplan}>
             <Text style={styles.noplanEmoji}>📅</Text>
-            <Text style={styles.noplanText}>No workout planned for today</Text>
+            <Text style={styles.noplanText}>No workout planned today</Text>
             <Text style={styles.noplanSub}>Go to Plan tab to set up your week</Text>
           </View>
         )}
@@ -125,25 +184,25 @@ export default function HomeScreen() {
         {log && log.completed !== 1 && (
           <View style={styles.section}>
             <View style={styles.sessionHeader}>
-              <Text style={styles.sectionTitle}>Active Session</Text>
-              <Text style={styles.progress}>{completedCount}/{totalExercises} done</Text>
+              <View>
+                <Text style={styles.sectionTitle}>Active Session</Text>
+                <Text style={styles.sessionMeta}>{completedCount}/{totalExercises} done · ⏱ {elapsed}</Text>
+              </View>
             </View>
 
             {log.exercises.map((logEx) => (
               <View key={logEx.id} style={styles.exerciseBlock}>
-                <TouchableOpacity
-                  style={[styles.exerciseRow, logEx.completed === 1 && styles.exerciseRowDone]}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                >
+                <View style={[styles.exerciseRow, logEx.completed === 1 && styles.exerciseRowDone]}>
                   <Text style={styles.exerciseName}>{logEx.exercise?.name ?? logEx.exercise_id}</Text>
-                  {logEx.completed === 1 ? <Text style={styles.doneCheck}>✓</Text> : null}
-                </TouchableOpacity>
+                  {logEx.completed === 1 && <Text style={styles.doneCheck}>✓</Text>}
+                </View>
                 <SetLogger
                   sets={logEx.sets}
+                  prevSets={logEx.prevSets}
+                  personalRecord={logEx.personalRecord}
                   onToggleSet={toggleSet}
                   onUpdateSet={updateSet}
+                  onSetCompleted={() => setShowRestTimer(true)}
                 />
               </View>
             ))}
@@ -172,9 +231,10 @@ export default function HomeScreen() {
         {/* Completed workout summary */}
         {log?.completed === 1 && (
           <View style={[styles.section, styles.completedSection]}>
-            <Text style={styles.completedTitle}>Workout Complete!</Text>
+            <Text style={styles.completedTitle}>Workout Complete! 🎉</Text>
             <Text style={styles.completedSub}>
               {log.exercises.length} exercises · {log.duration_minutes} min
+              {streak > 1 ? `  ·  🔥 ${streak}-day streak` : ''}
             </Text>
           </View>
         )}
@@ -185,8 +245,9 @@ export default function HomeScreen() {
             <Text style={styles.lazyEmoji}>😴</Text>
             <View>
               <Text style={styles.lazyTitle}>Feeling Lazy?</Text>
-              <Text style={styles.lazySub}>20-min session to keep your streak</Text>
+              <Text style={styles.lazySub}>20-min session · keeps your streak alive</Text>
             </View>
+            <Text style={styles.whatTodayArrow}>›</Text>
           </TouchableOpacity>
         )}
 
@@ -196,8 +257,13 @@ export default function HomeScreen() {
           <RecoveryVisualizer statuses={muscleStatuses} />
         </View>
 
-        <View style={{ height: 32 }} />
+        <View style={{ height: showRestTimer ? 140 : 32 }} />
       </ScrollView>
+
+      {/* Floating Rest Timer */}
+      {showRestTimer && (
+        <RestTimer onDismiss={() => setShowRestTimer(false)} defaultSeconds={90} />
+      )}
 
       {/* What Today Modal */}
       <Modal visible={showSuggestion} animationType="slide" presentationStyle="pageSheet">
@@ -231,7 +297,7 @@ export default function HomeScreen() {
       <Modal visible={showLazyDay} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaView style={styles.modal}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Lazy Day Mode</Text>
+            <Text style={styles.modalTitle}>Lazy Day Mode 😴</Text>
             <TouchableOpacity onPress={() => setShowLazyDay(false)}>
               <Text style={styles.modalClose}>Cancel</Text>
             </TouchableOpacity>
@@ -244,7 +310,7 @@ export default function HomeScreen() {
               <ExerciseCard key={ex.id} exercise={ex} />
             ))}
             <TouchableOpacity style={styles.startBtn} onPress={handleStartLazy}>
-              <Text style={styles.startBtnText}>Start Lazy Day Session</Text>
+              <Text style={styles.startBtnText}>▶  Start Lazy Day Session</Text>
             </TouchableOpacity>
           </ScrollView>
         </SafeAreaView>
@@ -272,6 +338,18 @@ const styles = StyleSheet.create({
   },
   greeting: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold, color: Colors.textPrimary },
   date: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: 2 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Radius.full,
+    gap: 3,
+  },
+  streakFire: { fontSize: 16 },
+  streakNum: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: '#E65100' },
   completedBadge: {
     backgroundColor: Colors.gymLight,
     paddingHorizontal: 12,
@@ -290,8 +368,8 @@ const styles = StyleSheet.create({
   },
   whatTodayEmoji: { fontSize: 24 },
   whatTodayTitle: { color: Colors.white, fontWeight: FontWeight.semibold, fontSize: FontSize.md },
-  whatTodaySubtitle: { color: 'rgba(255,255,255,0.6)', fontSize: FontSize.sm },
-  whatTodayArrow: { color: Colors.white, fontSize: 24, marginLeft: 'auto' },
+  whatTodaySubtitle: { color: 'rgba(255,255,255,0.6)', fontSize: FontSize.xs },
+  whatTodayArrow: { color: Colors.white, fontSize: 24 },
   section: {
     backgroundColor: Colors.white,
     borderRadius: Radius.lg,
@@ -303,18 +381,22 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.textPrimary },
   planName: { fontSize: FontSize.sm, color: Colors.textSecondary },
-  sessionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  progress: { fontSize: FontSize.sm, color: Colors.textSecondary, fontWeight: FontWeight.medium },
+  sessionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  sessionMeta: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: 2 },
   exerciseBlock: { gap: 6 },
   exerciseRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 4,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    marginTop: 4,
+    paddingTop: 8,
   },
   exerciseRowDone: { opacity: 0.6 },
-  exerciseName: { fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: Colors.textPrimary },
-  doneCheck: { color: Colors.gym, fontWeight: FontWeight.bold },
+  exerciseName: { fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: Colors.textPrimary, flex: 1 },
+  doneCheck: { color: Colors.gym, fontWeight: FontWeight.bold, fontSize: FontSize.lg },
   addPlanExBtn: {
     paddingVertical: 8,
     paddingHorizontal: 12,
@@ -365,7 +447,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   lazyEmoji: { fontSize: 28 },
-  lazyTitle: { fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: Colors.textPrimary },
+  lazyTitle: { fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: Colors.textPrimary, flex: 1 },
   lazySub: { fontSize: FontSize.xs, color: Colors.textSecondary },
   modal: { flex: 1, backgroundColor: Colors.background },
   modalHeader: {

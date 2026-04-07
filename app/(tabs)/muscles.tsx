@@ -116,7 +116,8 @@ export default function MusclesScreen() {
             gender="male"
             side={side}
             scale={1.1}
-            colors={{ fill: '#AAAAAA', stroke: '#CCCCCC' }}
+            defaultFill="#AAAAAA"
+            defaultStroke="#CCCCCC"
             onBodyPartPress={handleBodyPartPress}
           />
         </View>
