@@ -21,6 +21,7 @@ import { StretchPicker, StretchActiveModal } from '../../components/StretchRouti
 import { useCardio } from '../../hooks/useCardio';
 import { CARDIO_TYPES, CardioType } from '../../hooks/useCardio';
 import { StretchRoutine } from '../../constants/stretches';
+import StepCounter from '../../components/StepCounter';
 
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -184,6 +185,9 @@ export default function HomeScreen() {
           <StatCard value={log?.completed === 1 ? `${log.duration_minutes}m` : log ? elapsed : '—'} label={log?.completed === 1 ? 'Duration' : 'Elapsed'} color="#00B0FF" delay={200} />
           <StatCard value={totalExercises > 0 ? `${completedCount}/${totalExercises}` : '—'} label="Exercises" color="#BD7AFF" delay={300} />
         </View>
+
+        {/* ── Step Counter ── */}
+        <StepCounter />
 
         {/* ── What Today button ── */}
         <TouchableOpacity onPress={handleWhatToday} activeOpacity={0.85}>
