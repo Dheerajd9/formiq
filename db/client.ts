@@ -83,6 +83,18 @@ export function initDB() {
       achieved_at TEXT DEFAULT (date('now')),
       UNIQUE(exercise_id)
     );
+
+    CREATE TABLE IF NOT EXISTS cardio_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL,
+      type TEXT DEFAULT 'treadmill',
+      distance_km REAL DEFAULT 0,
+      duration_minutes INTEGER DEFAULT 0,
+      avg_speed_kmh REAL DEFAULT 0,
+      calories INTEGER DEFAULT 0,
+      notes TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 }
 

@@ -16,6 +16,11 @@ import SetLogger from '../../components/SetLogger';
 import RecoveryVisualizer from '../../components/RecoveryVisualizer';
 import ExerciseCard from '../../components/ExerciseCard';
 import RestTimer from '../../components/RestTimer';
+import CardioLogger from '../../components/CardioLogger';
+import { StretchPicker, StretchActiveModal } from '../../components/StretchRoutineModal';
+import { useCardio } from '../../hooks/useCardio';
+import { CARDIO_TYPES, CardioType } from '../../hooks/useCardio';
+import { StretchRoutine } from '../../constants/stretches';
 
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -67,10 +72,15 @@ export default function HomeScreen() {
   const { suggest } = useWhatToday();
   const { muscleStatuses } = useRecovery();
 
+  const { logs: cardioLogs, todayTotals: cardioTotals, logCardio, deleteLog: deleteCardio } = useCardio();
+
   const [showSuggestion, setShowSuggestion] = useState(false);
   const [suggestion, setSuggestion] = useState<ReturnType<typeof suggest> | null>(null);
   const [showLazyDay, setShowLazyDay] = useState(false);
   const [showRestTimer, setShowRestTimer] = useState(false);
+  const [showCardio, setShowCardio] = useState(false);
+  const [showStretchPicker, setShowStretchPicker] = useState(false);
+  const [activeRoutine, setActiveRoutine] = useState<StretchRoutine | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [streak, setStreak] = useState(0);
   const startTimeRef = useRef(Date.now());
@@ -289,6 +299,84 @@ export default function HomeScreen() {
           </TouchableOpacity>
         )}
 
+        {/* ── Stretch & Warm-Up ── */}
+        <TouchableOpacity
+          style={styles.stretchCard}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowStretchPicker(true); }}
+          activeOpacity={0.82}
+        >
+          <LinearGradient colors={['#00E67618', '#00B0FF0A']} style={styles.stretchGrad}>
+            <Text style={styles.stretchEmoji}>🧘</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.stretchTitle}>Stretch & Warm-Up</Text>
+              <Text style={styles.stretchSub}>5 routines · step-by-step with hold timer</Text>
+            </View>
+            <Text style={[styles.whatBtnArrow, { color: Colors.accent }]}>›</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* ── Cardio / Running ── */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>🏃 Cardio Today</Text>
+            <TouchableOpacity
+              style={styles.addCardioBtn}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowCardio(true); }}
+            >
+              <Text style={styles.addCardioBtnText}>+ Log Run</Text>
+            </TouchableOpacity>
+          </View>
+
+          {cardioLogs.length > 0 ? (
+            <>
+              <View style={styles.cardioTotalsRow}>
+                <View style={styles.cardioTotal}>
+                  <Text style={[styles.cardioTotalVal, { color: Colors.cardio }]}>{cardioTotals.distance_km.toFixed(2)}</Text>
+                  <Text style={styles.cardioTotalLabel}>km</Text>
+                </View>
+                <View style={styles.cardioTotal}>
+                  <Text style={[styles.cardioTotalVal, { color: Colors.cardio }]}>{(cardioTotals.distance_km * 0.621371).toFixed(2)}</Text>
+                  <Text style={styles.cardioTotalLabel}>miles</Text>
+                </View>
+                <View style={styles.cardioTotal}>
+                  <Text style={styles.cardioTotalVal}>{cardioTotals.duration_minutes}</Text>
+                  <Text style={styles.cardioTotalLabel}>min</Text>
+                </View>
+                <View style={styles.cardioTotal}>
+                  <Text style={[styles.cardioTotalVal, { color: '#FF6D00' }]}>{cardioTotals.calories}</Text>
+                  <Text style={styles.cardioTotalLabel}>kcal</Text>
+                </View>
+              </View>
+              {cardioLogs.map((cl) => {
+                const ct = CARDIO_TYPES.find((t) => t.key === cl.type) ?? CARDIO_TYPES[0];
+                return (
+                  <View key={cl.id} style={styles.cardioRow}>
+                    <Text style={styles.cardioRowEmoji}>{ct.emoji}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.cardioRowName}>{ct.label}</Text>
+                      <Text style={styles.cardioRowMeta}>
+                        {cl.distance_km.toFixed(2)}km ({(cl.distance_km * 0.621371).toFixed(2)}mi) · {cl.duration_minutes}min
+                        {cl.avg_speed_kmh > 0 ? ` · ${cl.avg_speed_kmh.toFixed(1)}km/h` : ''}
+                        {cl.calories > 0 ? ` · ${cl.calories}kcal` : ''}
+                      </Text>
+                      {!!cl.notes && <Text style={styles.cardioRowNotes}>{cl.notes}</Text>}
+                    </View>
+                    <TouchableOpacity onPress={() => deleteCardio(cl.id)}>
+                      <Text style={styles.deleteText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </>
+          ) : (
+            <TouchableOpacity style={styles.cardioEmpty} onPress={() => setShowCardio(true)}>
+              <Text style={styles.cardioEmptyEmoji}>🏃</Text>
+              <Text style={styles.cardioEmptyText}>No cardio logged today</Text>
+              <Text style={styles.cardioEmptySub}>Tap to log treadmill, run, cycling…</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
         {/* ── Recovery ── */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Muscle Recovery</Text>
@@ -301,6 +389,27 @@ export default function HomeScreen() {
 
       {/* Floating Rest Timer */}
       {showRestTimer && <RestTimer onDismiss={() => setShowRestTimer(false)} defaultSeconds={90} />}
+
+      {/* Cardio Logger */}
+      <CardioLogger
+        visible={showCardio}
+        onClose={() => setShowCardio(false)}
+        onSave={(type, distKm, dur, speed, notes) => { logCardio(type, distKm, dur, speed, notes); }}
+      />
+
+      {/* Stretch Picker */}
+      <StretchPicker
+        visible={showStretchPicker}
+        onClose={() => setShowStretchPicker(false)}
+        onSelect={(r) => { setShowStretchPicker(false); setActiveRoutine(r); }}
+      />
+
+      {/* Active Stretch Routine */}
+      <StretchActiveModal
+        routine={activeRoutine}
+        onClose={() => setActiveRoutine(null)}
+        onComplete={() => { setActiveRoutine(null); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); }}
+      />
 
       {/* What Today Modal */}
       <Modal visible={showSuggestion} animationType="slide" presentationStyle="pageSheet">
@@ -492,6 +601,32 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: Colors.textPrimary },
   emptySub: { fontSize: FontSize.sm, color: Colors.textTertiary, textAlign: 'center' },
 
+  // Stretch card
+  stretchCard: { marginBottom: Spacing.md, borderRadius: Radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: Colors.border },
+  stretchGrad: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, gap: Spacing.sm },
+  stretchEmoji: { fontSize: 28 },
+  stretchTitle: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: Colors.textPrimary },
+  stretchSub: { fontSize: FontSize.xs, color: Colors.textTertiary, marginTop: 2 },
+  // Cardio
+  addCardioBtn: { backgroundColor: Colors.cardio + '22', paddingHorizontal: 12, paddingVertical: 5, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.cardio + '44' },
+  addCardioBtnText: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: Colors.cardio },
+  cardioTotalsRow: { flexDirection: 'row', gap: 0 },
+  cardioTotal: { flex: 1, alignItems: 'center', paddingVertical: 8, gap: 2 },
+  cardioTotalVal: { fontSize: FontSize.xl, fontWeight: FontWeight.heavy, color: Colors.textPrimary },
+  cardioTotalLabel: { fontSize: FontSize.xs, color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.3 },
+  cardioRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm,
+    paddingVertical: 10, borderTopWidth: 1, borderTopColor: Colors.border,
+  },
+  cardioRowEmoji: { fontSize: 22, marginTop: 1 },
+  cardioRowName: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: Colors.textPrimary },
+  cardioRowMeta: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2, lineHeight: 16 },
+  cardioRowNotes: { fontSize: FontSize.xs, color: Colors.textTertiary, marginTop: 2, fontStyle: 'italic' },
+  deleteText: { color: Colors.textTertiary, fontSize: FontSize.md, padding: 4 },
+  cardioEmpty: { alignItems: 'center', paddingVertical: Spacing.lg, gap: 4 },
+  cardioEmptyEmoji: { fontSize: 32 },
+  cardioEmptyText: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: Colors.textSecondary },
+  cardioEmptySub: { fontSize: FontSize.xs, color: Colors.textTertiary },
   lazyCard: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: Colors.surface, borderRadius: Radius.lg,

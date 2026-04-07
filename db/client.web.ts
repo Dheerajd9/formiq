@@ -372,6 +372,7 @@ export function getDB() {
 // ─── Init (ensure default rows exist) ────────────────────────────────────────
 
 export function initDB() {
+  // cardio_logs table is auto-created via localStorage on first insert — no migration needed.
   // Ensure user_settings row 1 exists
   const settings = readTable<Row>('user_settings');
   if (!settings.find((s) => s.id == 1)) {
