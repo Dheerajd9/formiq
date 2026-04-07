@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     gap: 4,
   },
-  rowDone: { backgroundColor: Colors.gymLight },
+  rowDone: { backgroundColor: Colors.gymDark },
   rowPR: { backgroundColor: '#2D2A00' },
   setNum: {
     fontSize: FontSize.sm,
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  inputDone: { backgroundColor: Colors.gymLight, borderColor: 'transparent' },
+  inputDone: { backgroundColor: Colors.gymDark, borderColor: 'transparent' },
   checkBtn: {
     height: 32,
     borderRadius: 6,

@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   // Modal styles
   modal: { flex: 1, backgroundColor: Colors.background },
   modalHeader: { padding: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  modalClose: { fontSize: FontSize.md, color: Colors.textSecondary, fontWeight: FontWeight.medium },
+  modalClose: { fontSize: FontSize.md, color: Colors.accent, fontWeight: FontWeight.medium },
   modalContent: { padding: Spacing.md, gap: Spacing.md, paddingBottom: 48, alignItems: 'center' },
   detailIconBox: {
     width: 80, height: 80, borderRadius: 40,
@@ -414,6 +414,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.textPrimary,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  stepNumText: { color: Colors.white, fontSize: FontSize.xs, fontWeight: FontWeight.bold },
+  stepNumText: { color: Colors.stepText, fontSize: FontSize.xs, fontWeight: FontWeight.bold },
   stepText: { flex: 1, fontSize: FontSize.sm, color: Colors.textSecondary, lineHeight: 20 },
 });

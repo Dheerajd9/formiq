@@ -130,8 +130,8 @@ export default function SettingsScreen() {
                 }
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }}
-              trackColor={{ false: Colors.border, true: Colors.textPrimary }}
-              thumbColor={Colors.white}
+              trackColor={{ false: Colors.border, true: Colors.accent }}
+              thumbColor={Colors.black}
             />
           </View>
         </View>
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  goalCardActive: { backgroundColor: Colors.textPrimary, borderColor: Colors.textPrimary },
+  goalCardActive: { backgroundColor: Colors.btnPrimary, borderColor: Colors.btnPrimary },
   goalEmoji: { fontSize: 28 },
   goalLabel: {
     fontSize: FontSize.sm,
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
   },
-  goalLabelActive: { color: Colors.white },
+  goalLabelActive: { color: Colors.btnPrimaryText },
   daysRow: { flexDirection: 'row', gap: Spacing.sm },
   dayBtn: {
     flex: 1,
@@ -231,9 +231,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  dayBtnActive: { backgroundColor: Colors.textPrimary, borderColor: Colors.textPrimary },
+  dayBtnActive: { backgroundColor: Colors.btnPrimary, borderColor: Colors.btnPrimary },
   dayBtnText: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.textSecondary },
-  dayBtnTextActive: { color: Colors.white },
+  dayBtnTextActive: { color: Colors.btnPrimaryText },
   colorRow: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
   colorDot: {
     width: 36,
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   settingLabel: { fontSize: FontSize.sm, color: Colors.textSecondary },
-  settingValue: { fontSize: FontSize.sm, fontWeight: FontWeight.medium, color: Colors.textPrimary },
+  settingValue: { fontSize: FontSize.sm, fontWeight: FontWeight.medium, color: Colors.textSecondary },
   resetBtn: {
     borderRadius: Radius.md,
     padding: Spacing.md,

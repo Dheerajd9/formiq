@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
     borderRadius: Radius.md,
     padding: Spacing.md,
     marginBottom: Spacing.sm,
@@ -103,12 +103,12 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: Colors.textPrimary,
+    backgroundColor: Colors.btnPrimary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   addBtnText: {
-    color: Colors.white,
+    color: Colors.btnPrimaryText,
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
     lineHeight: 20,

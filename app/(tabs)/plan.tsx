@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: Radius.full,
   },
-  addBtnText: { color: Colors.white, fontWeight: FontWeight.semibold, fontSize: FontSize.sm },
+  addBtnText: { color: Colors.btnPrimaryText, fontWeight: FontWeight.semibold, fontSize: FontSize.sm },
   planTabs: { flexDirection: 'row', paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm, gap: Spacing.xs },
   planTab: {
     flexDirection: 'row',
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     gap: 4,
   },
-  planTabActive: { backgroundColor: Colors.textPrimary, borderColor: Colors.textPrimary },
+  planTabActive: { backgroundColor: Colors.btnSecondary, borderColor: Colors.btnSecondary },
   activeDot: { color: Colors.gym, fontSize: 8 },
   planTabText: { fontSize: FontSize.sm, color: Colors.textSecondary, fontWeight: FontWeight.medium },
   planTabTextActive: { color: Colors.white },
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activateBtn: {
-    backgroundColor: Colors.gym,
+    backgroundColor: Colors.btnPrimary,
     paddingHorizontal: Spacing.md,
     paddingVertical: 6,
     borderRadius: Radius.full,
@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
     minWidth: 52,
     gap: 2,
   },
-  dayTabActive: { backgroundColor: Colors.textPrimary, borderColor: Colors.textPrimary },
+  dayTabActive: { backgroundColor: Colors.btnSecondary, borderColor: Colors.btnSecondary },
   dayEmoji: { fontSize: 14 },
   dayTabText: { fontSize: FontSize.xs, color: Colors.textSecondary, fontWeight: FontWeight.medium },
   dayTabTextActive: { color: Colors.white },
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     marginTop: Spacing.md,
   },
-  templateBtnText: { color: Colors.white, fontWeight: FontWeight.bold, fontSize: FontSize.md },
+  templateBtnText: { color: Colors.btnPrimaryText, fontWeight: FontWeight.bold, fontSize: FontSize.md },
   newPlanBtn: {
     paddingHorizontal: Spacing.xl,
     paddingVertical: 12,
@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     alignItems: 'center',
   },
-  createBtnText: { color: Colors.white, fontWeight: FontWeight.bold, fontSize: FontSize.md },
+  createBtnText: { color: Colors.btnPrimaryText, fontWeight: FontWeight.bold, fontSize: FontSize.md },
   orText: { textAlign: 'center', color: Colors.textTertiary, fontSize: FontSize.sm },
   templateBtn2: {
     borderRadius: Radius.md,

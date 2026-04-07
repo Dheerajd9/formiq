@@ -1,5 +1,5 @@
 export const Colors = {
-  // === Core backgrounds (pure Apple dark) ===
+  // === Core backgrounds ===
   background: '#000000',
   surface: '#111111',
   surfaceAlt: '#1C1C1E',
@@ -12,37 +12,54 @@ export const Colors = {
   textSecondary: '#8E8E93',
   textTertiary: '#48484A',
 
-  // === Core accents ===
+  // === Aliases ===
   white: '#FFFFFF',
   black: '#000000',
-  accent: '#00E676',         // electric green — primary CTA
+
+  // === Primary CTA (electric green) ===
+  accent: '#00E676',
   accentLight: '#00E67618',
 
-  // === Workout type colors (vibrant on dark) ===
+  // === Button tokens (replaces old textPrimary-as-button pattern) ===
+  btnPrimary: '#00E676',     // primary button background
+  btnPrimaryText: '#000000', // text on primary button
+  btnSecondary: '#2C2C2E',   // secondary/chip active background
+  btnSecondaryText: '#FFFFFF',
+
+  // === Step circle ===
+  stepBg: '#00E676',
+  stepText: '#000000',
+
+  // === Card backgrounds (for modals, stat boxes inside cards) ===
+  cardInner: '#1C1C1E',      // inner box inside a card
+  cardModal: '#111111',      // modal / sheet background
+
+  // === Workout type colors ===
   gym: '#00E676',
-  gymLight: '#00E67618',
+  gymLight: '#00E67622',     // dark-safe tint (not bright green)
+  gymDark: '#003D1A',        // darker tint for completed states
   cardio: '#2979FF',
-  cardioLight: '#2979FF18',
+  cardioLight: '#2979FF22',
   swim: '#00B0FF',
-  swimLight: '#00B0FF18',
+  swimLight: '#00B0FF22',
   rest: '#48484A',
   restLight: '#1C1C1E',
   missed: '#FF5252',
-  missedLight: '#FF525218',
+  missedLight: '#FF525222',
   missedDark: '#FF5252',
 
   // === Muscle recovery ===
   recovering: '#FF5252',
-  recoveringLight: '#FF525218',
+  recoveringLight: '#FF525222',
   ready: '#00E676',
-  readyLight: '#00E67618',
+  readyLight: '#00E67622',
 
-  // === Gradient stops (used with expo-linear-gradient) ===
+  // === Gradient stops ===
   gradientStart: '#00E676',
   gradientMid: '#1DE9B6',
   gradientEnd: '#00B0FF',
 
-  // === Glassmorphism overlay ===
+  // === Glassmorphism ===
   glass: 'rgba(255,255,255,0.06)',
   glassBorder: 'rgba(255,255,255,0.10)',
 };
