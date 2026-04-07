@@ -9,7 +9,7 @@ function TabIcon({ label, emoji, focused }: { label: string; emoji: string; focu
       <Text style={{
         fontSize: 10,
         fontWeight: focused ? '600' : '400',
-        color: focused ? Colors.textPrimary : Colors.textTertiary,
+        color: focused ? Colors.accent : Colors.textTertiary,
       }}>
         {label}
       </Text>
@@ -23,7 +23,7 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: Colors.white,
+          backgroundColor: Colors.surface,
           borderTopColor: Colors.border,
           borderTopWidth: 1,
           height: 80,

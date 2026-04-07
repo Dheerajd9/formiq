@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  SafeAreaView, Modal, Alert,
+  SafeAreaView, Modal, Alert, Animated,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Colors, Spacing, Radius, FontSize, FontWeight } from '../../constants/theme';
 import { usePlan } from '../../hooks/usePlan';
@@ -42,6 +43,24 @@ function getStreak(): number {
   }
 }
 
+// Animated stat card
+function StatCard({ value, label, color, delay = 0 }: { value: string; label: string; color: string; delay?: number }) {
+  const fade = useRef(new Animated.Value(0)).current;
+  const slide = useRef(new Animated.Value(20)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fade, { toValue: 1, duration: 500, delay, useNativeDriver: true }),
+      Animated.timing(slide, { toValue: 0, duration: 500, delay, useNativeDriver: true }),
+    ]).start();
+  }, []);
+  return (
+    <Animated.View style={[styles.statCard, { opacity: fade, transform: [{ translateY: slide }] }]}>
+      <Text style={[styles.statCardValue, { color }]}>{value}</Text>
+      <Text style={styles.statCardLabel}>{label}</Text>
+    </Animated.View>
+  );
+}
+
 export default function HomeScreen() {
   const { todayPlan, activePlan } = usePlan();
   const { log, startWorkout, addExerciseToLog, toggleSet, updateSet, completeWorkout, refresh } = useWorkoutLog();
@@ -55,22 +74,25 @@ export default function HomeScreen() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [streak, setStreak] = useState(0);
   const startTimeRef = useRef(Date.now());
+  const heroFade = useRef(new Animated.Value(0)).current;
+  const heroSlide = useRef(new Animated.Value(-30)).current;
 
-  const todayStr = today();
   const todayDate = new Date();
   const dayName = DAY_NAMES[todayDate.getDay() === 0 ? 6 : todayDate.getDay() - 1];
 
-  // Live workout timer
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(heroFade, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(heroSlide, { toValue: 0, duration: 700, useNativeDriver: true }),
+    ]).start();
+    setStreak(getStreak());
+  }, []);
+
   useEffect(() => {
     if (!log || log.completed === 1) return;
     const t = setInterval(() => setElapsedSeconds(Math.floor((Date.now() - startTimeRef.current) / 1000)), 1000);
     return () => clearInterval(t);
   }, [log?.id, log?.completed]);
-
-  // Streak on mount
-  useEffect(() => {
-    setStreak(getStreak());
-  }, [log?.completed]);
 
   const elapsed = (() => {
     const m = Math.floor(elapsedSeconds / 60);
@@ -79,7 +101,7 @@ export default function HomeScreen() {
   })();
 
   const handleStartWorkout = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     startTimeRef.current = Date.now();
     setElapsedSeconds(0);
     startWorkout(todayPlan?.workout_type ?? 'gym');
@@ -87,8 +109,7 @@ export default function HomeScreen() {
 
   const handleWhatToday = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const s = suggest();
-    setSuggestion(s);
+    setSuggestion(suggest());
     setShowSuggestion(true);
   };
 
@@ -98,103 +119,122 @@ export default function HomeScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-  const handleLazyDay = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setShowLazyDay(true);
-  };
-
-  const handleStartLazy = () => {
-    setShowLazyDay(false);
-    startTimeRef.current = Date.now();
-    setElapsedSeconds(0);
-    startWorkout('lazy_day');
-    setTimeout(() => refresh(), 200);
-  };
-
   const handleComplete = () => {
     if (!log) return;
     const mins = Math.max(1, Math.round(elapsedSeconds / 60));
     completeWorkout(log.id, mins);
-    setStreak(getStreak());
+    const newStreak = getStreak();
+    setStreak(newStreak);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert(
       '🎉 Workout Complete!',
-      `${log.exercises.length} exercises · ${mins} min${streak > 0 ? `\n🔥 ${streak + 1}-day streak!` : ''}`
+      `${log.exercises.length} exercises · ${mins} min${newStreak > 0 ? `\n🔥 ${newStreak}-day streak!` : ''}`
     );
   };
 
   const completedCount = log?.exercises.filter((e) => e.completed === 1).length ?? 0;
   const totalExercises = log?.exercises.length ?? 0;
+  const progressPct = totalExercises > 0 ? completedCount / totalExercises : 0;
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Good {getTimeOfDay()}</Text>
-            <Text style={styles.date}>{dayName}, {todayDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}</Text>
+        {/* ── Hero Header ── */}
+        <Animated.View style={[styles.hero, { opacity: heroFade, transform: [{ translateY: heroSlide }] }]}>
+          <LinearGradient
+            colors={['#00E676', '#1DE9B6', '#00B0FF']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={styles.heroGradientBar}
+          />
+          <View style={styles.heroTop}>
+            <View>
+              <Text style={styles.greeting}>Good {getTimeOfDay()}</Text>
+              <Text style={styles.date}>{dayName} · {todayDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}</Text>
+            </View>
+            <View style={styles.heroRight}>
+              {streak > 0 && (
+                <View style={styles.streakBadge}>
+                  <Text style={styles.streakFire}>🔥</Text>
+                  <Text style={styles.streakNum}>{streak}</Text>
+                </View>
+              )}
+              {log?.completed === 1 && (
+                <View style={styles.doneBadge}>
+                  <Text style={styles.doneBadgeText}>Done ✓</Text>
+                </View>
+              )}
+            </View>
           </View>
-          <View style={styles.headerRight}>
-            {streak > 0 && (
-              <View style={styles.streakBadge}>
-                <Text style={styles.streakFire}>🔥</Text>
-                <Text style={styles.streakNum}>{streak}</Text>
-              </View>
-            )}
-            {log?.completed === 1 && (
-              <View style={styles.completedBadge}>
-                <Text style={styles.completedBadgeText}>Done ✓</Text>
-              </View>
-            )}
-          </View>
+        </Animated.View>
+
+        {/* ── Stat row ── */}
+        <View style={styles.statRow}>
+          <StatCard value={streak > 0 ? `${streak}d` : '—'} label="Streak" color={Colors.accent} delay={100} />
+          <StatCard value={log?.completed === 1 ? `${log.duration_minutes}m` : log ? elapsed : '—'} label={log?.completed === 1 ? 'Duration' : 'Elapsed'} color="#00B0FF" delay={200} />
+          <StatCard value={totalExercises > 0 ? `${completedCount}/${totalExercises}` : '—'} label="Exercises" color="#BD7AFF" delay={300} />
         </View>
 
-        {/* What Today? button */}
-        <TouchableOpacity style={styles.whatTodayBtn} onPress={handleWhatToday}>
-          <Text style={styles.whatTodayEmoji}>🧠</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.whatTodayTitle}>What should I do today?</Text>
-            <Text style={styles.whatTodaySubtitle}>Smart suggestion based on recovery</Text>
-          </View>
-          <Text style={styles.whatTodayArrow}>›</Text>
+        {/* ── What Today button ── */}
+        <TouchableOpacity onPress={handleWhatToday} activeOpacity={0.85}>
+          <LinearGradient
+            colors={['#00E676', '#1DE9B6']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+            style={styles.whatBtn}
+          >
+            <Text style={styles.whatBtnEmoji}>🧠</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.whatBtnTitle}>What should I train today?</Text>
+              <Text style={styles.whatBtnSub}>Smart pick based on muscle recovery</Text>
+            </View>
+            <Text style={styles.whatBtnArrow}>›</Text>
+          </LinearGradient>
         </TouchableOpacity>
 
-        {/* Today's Plan */}
+        {/* ── Today's Plan ── */}
         {todayPlan ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Today's Plan</Text>
-            <Text style={styles.planName}>{activePlan?.name} · {todayPlan.exercises.length} exercises</Text>
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Today's Plan</Text>
+              <Text style={styles.cardMeta}>{activePlan?.name}</Text>
+            </View>
+            <Text style={styles.cardSub}>{todayPlan.exercises.length} exercises planned</Text>
             {!log && (
-              <TouchableOpacity style={styles.startBtn} onPress={handleStartWorkout}>
+              <TouchableOpacity onPress={handleStartWorkout} style={styles.startBtn} activeOpacity={0.8}>
                 <Text style={styles.startBtnText}>▶  Start Workout</Text>
               </TouchableOpacity>
             )}
           </View>
         ) : (
-          <View style={styles.noplan}>
-            <Text style={styles.noplanEmoji}>📅</Text>
-            <Text style={styles.noplanText}>No workout planned today</Text>
-            <Text style={styles.noplanSub}>Go to Plan tab to set up your week</Text>
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyEmoji}>📅</Text>
+            <Text style={styles.emptyTitle}>No workout planned today</Text>
+            <Text style={styles.emptySub}>Set up your week in the Plan tab</Text>
           </View>
         )}
 
-        {/* Active workout session */}
+        {/* ── Active Session ── */}
         {log && log.completed !== 1 && (
-          <View style={styles.section}>
-            <View style={styles.sessionHeader}>
-              <View>
-                <Text style={styles.sectionTitle}>Active Session</Text>
-                <Text style={styles.sessionMeta}>{completedCount}/{totalExercises} done · ⏱ {elapsed}</Text>
-              </View>
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Active Session</Text>
+              <Text style={[styles.cardMeta, { color: Colors.accent }]}>⏱ {elapsed}</Text>
             </View>
 
+            {/* Progress bar */}
+            <View style={styles.progressTrack}>
+              <Animated.View style={[styles.progressFill, { width: `${progressPct * 100}%` as `${number}%` }]} />
+            </View>
+            <Text style={styles.progressLabel}>{completedCount} of {totalExercises} complete</Text>
+
             {log.exercises.map((logEx) => (
-              <View key={logEx.id} style={styles.exerciseBlock}>
-                <View style={[styles.exerciseRow, logEx.completed === 1 && styles.exerciseRowDone]}>
-                  <Text style={styles.exerciseName}>{logEx.exercise?.name ?? logEx.exercise_id}</Text>
-                  {logEx.completed === 1 && <Text style={styles.doneCheck}>✓</Text>}
+              <View key={logEx.id} style={styles.exBlock}>
+                <View style={styles.exRow}>
+                  <View style={[styles.exDot, logEx.completed === 1 && styles.exDotDone]} />
+                  <Text style={[styles.exName, logEx.completed === 1 && styles.exNameDone]}>
+                    {logEx.exercise?.name ?? logEx.exercise_id}
+                  </Text>
+                  {logEx.completed === 1 && <Text style={styles.exCheck}>✓</Text>}
                 </View>
                 <SetLogger
                   sets={logEx.sets}
@@ -207,63 +247,60 @@ export default function HomeScreen() {
               </View>
             ))}
 
-            {/* Add from plan */}
             {todayPlan?.exercises.map((planEx) => {
-              const alreadyAdded = log.exercises.some((le) => le.exercise_id === planEx.exercise_id);
-              if (alreadyAdded) return null;
+              if (log.exercises.some((le) => le.exercise_id === planEx.exercise_id)) return null;
               return (
                 <TouchableOpacity
                   key={planEx.id}
-                  style={styles.addPlanExBtn}
+                  style={styles.addExBtn}
                   onPress={() => addExerciseToLog(log.id, planEx.exercise_id, planEx.sets, planEx.reps)}
                 >
-                  <Text style={styles.addPlanExText}>+ Add {planEx.exercise?.name ?? planEx.exercise_id}</Text>
+                  <Text style={styles.addExText}>+ {planEx.exercise?.name ?? planEx.exercise_id}</Text>
                 </TouchableOpacity>
               );
             })}
 
-            <TouchableOpacity style={styles.completeBtn} onPress={handleComplete}>
-              <Text style={styles.completeBtnText}>Complete Workout</Text>
+            <TouchableOpacity style={styles.completeBtn} onPress={handleComplete} activeOpacity={0.85}>
+              <Text style={styles.completeBtnText}>Complete Workout  🎉</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {/* Completed workout summary */}
+        {/* ── Completed summary ── */}
         {log?.completed === 1 && (
-          <View style={[styles.section, styles.completedSection]}>
-            <Text style={styles.completedTitle}>Workout Complete! 🎉</Text>
+          <LinearGradient colors={['#00E67618', '#00B0FF18']} style={styles.completedCard}>
+            <Text style={styles.completedTitle}>Workout Complete  🎉</Text>
             <Text style={styles.completedSub}>
               {log.exercises.length} exercises · {log.duration_minutes} min
               {streak > 1 ? `  ·  🔥 ${streak}-day streak` : ''}
             </Text>
-          </View>
+          </LinearGradient>
         )}
 
-        {/* Lazy Day Mode */}
+        {/* ── Lazy Day ── */}
         {!log && (
-          <TouchableOpacity style={styles.lazyBtn} onPress={handleLazyDay}>
+          <TouchableOpacity style={styles.lazyCard} onPress={() => setShowLazyDay(true)} activeOpacity={0.8}>
             <Text style={styles.lazyEmoji}>😴</Text>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.lazyTitle}>Feeling Lazy?</Text>
-              <Text style={styles.lazySub}>20-min session · keeps your streak alive</Text>
+              <Text style={styles.lazySub}>20 min · no equipment · keeps streak alive</Text>
             </View>
-            <Text style={styles.whatTodayArrow}>›</Text>
+            <Text style={[styles.whatBtnArrow, { color: Colors.textTertiary }]}>›</Text>
           </TouchableOpacity>
         )}
 
-        {/* Recovery Visualizer */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Muscle Recovery</Text>
+        {/* ── Recovery ── */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Muscle Recovery</Text>
+          <Text style={styles.cardSub}>Green = ready to train</Text>
           <RecoveryVisualizer statuses={muscleStatuses} />
         </View>
 
-        <View style={{ height: showRestTimer ? 140 : 32 }} />
+        <View style={{ height: showRestTimer ? 160 : 32 }} />
       </ScrollView>
 
       {/* Floating Rest Timer */}
-      {showRestTimer && (
-        <RestTimer onDismiss={() => setShowRestTimer(false)} defaultSeconds={90} />
-      )}
+      {showRestTimer && <RestTimer onDismiss={() => setShowRestTimer(false)} defaultSeconds={90} />}
 
       {/* What Today Modal */}
       <Modal visible={showSuggestion} animationType="slide" presentationStyle="pageSheet">
@@ -275,15 +312,14 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
           {suggestion && (
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: Spacing.md }}>
+            <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
               <View style={styles.reasonBox}>
                 <Text style={styles.reasonText}>{suggestion.reason}</Text>
               </View>
-              <Text style={styles.suggestLabel}>Suggested Exercises</Text>
+              <Text style={styles.sectionLabel}>Suggested Exercises</Text>
               {suggestion.exercises.map((ex) => (
                 <ExerciseCard
-                  key={ex.id}
-                  exercise={ex}
+                  key={ex.id} exercise={ex}
                   showAddButton={!!log && !log.completed}
                   onAdd={() => handleAddSuggested(ex)}
                 />
@@ -303,13 +339,17 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={{ padding: Spacing.md, gap: Spacing.md }}>
-            <Text style={styles.lazyDesc}>
-              3 exercises · ~20 minutes · No equipment needed{'\n'}Your streak stays alive!
-            </Text>
-            {LAZY_DAY_EXERCISES.map((ex) => (
-              <ExerciseCard key={ex.id} exercise={ex} />
-            ))}
-            <TouchableOpacity style={styles.startBtn} onPress={handleStartLazy}>
+            <View style={styles.reasonBox}>
+              <Text style={styles.reasonText}>3 exercises · ~20 minutes · No equipment needed{'\n'}Your streak stays alive! 🔥</Text>
+            </View>
+            {LAZY_DAY_EXERCISES.map((ex) => <ExerciseCard key={ex.id} exercise={ex} />)}
+            <TouchableOpacity style={styles.startBtn} onPress={() => {
+              setShowLazyDay(false);
+              startTimeRef.current = Date.now();
+              setElapsedSeconds(0);
+              startWorkout('lazy_day');
+              setTimeout(() => refresh(), 200);
+            }}>
               <Text style={styles.startBtnText}>▶  Start Lazy Day Session</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -328,153 +368,153 @@ function getTimeOfDay() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  scroll: { flex: 1, paddingHorizontal: Spacing.md },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.md,
-  },
-  greeting: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold, color: Colors.textPrimary },
+  scrollContent: { paddingHorizontal: Spacing.md, paddingBottom: 40 },
+
+  // Hero
+  hero: { paddingTop: Spacing.lg, marginBottom: Spacing.md },
+  heroGradientBar: { height: 3, borderRadius: 2, marginBottom: Spacing.md, width: 60 },
+  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  heroRight: { flexDirection: 'row', gap: Spacing.xs, alignItems: 'center' },
+  greeting: { fontSize: FontSize.xxxl, fontWeight: FontWeight.heavy, color: Colors.textPrimary, letterSpacing: -0.5 },
   date: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: 2 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   streakBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF3E0',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: Radius.full,
-    gap: 3,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#FF6D0018',
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: Radius.full, gap: 3,
+    borderWidth: 1, borderColor: '#FF6D0030',
   },
-  streakFire: { fontSize: 16 },
-  streakNum: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: '#E65100' },
-  completedBadge: {
+  streakFire: { fontSize: 14 },
+  streakNum: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: '#FF6D00' },
+  doneBadge: {
     backgroundColor: Colors.gymLight,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10, paddingVertical: 5,
     borderRadius: Radius.full,
   },
-  completedBadgeText: { color: Colors.gym, fontWeight: FontWeight.semibold, fontSize: FontSize.sm },
-  whatTodayBtn: {
-    flexDirection: 'row',
+  doneBadgeText: { color: Colors.accent, fontWeight: FontWeight.semibold, fontSize: FontSize.sm },
+
+  // Stat row
+  statRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md },
+  statCard: {
+    flex: 1, backgroundColor: Colors.surface,
+    borderRadius: Radius.lg, padding: Spacing.md,
+    alignItems: 'center', gap: 2,
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  statCardValue: { fontSize: FontSize.xxl, fontWeight: FontWeight.heavy },
+  statCardLabel: { fontSize: FontSize.xs, color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  // What Today
+  whatBtn: {
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: Radius.lg, padding: Spacing.md,
+    marginBottom: Spacing.md, gap: Spacing.sm,
+  },
+  whatBtnEmoji: { fontSize: 26 },
+  whatBtnTitle: { color: Colors.black, fontWeight: FontWeight.bold, fontSize: FontSize.md },
+  whatBtnSub: { color: 'rgba(0,0,0,0.55)', fontSize: FontSize.xs, marginTop: 1 },
+  whatBtnArrow: { color: Colors.black, fontSize: 26, fontWeight: FontWeight.bold },
+
+  // Cards
+  card: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg, padding: Spacing.md,
+    marginBottom: Spacing.md, gap: Spacing.sm,
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.textPrimary },
+  cardMeta: { fontSize: FontSize.sm, color: Colors.textSecondary, fontWeight: FontWeight.medium },
+  cardSub: { fontSize: FontSize.sm, color: Colors.textTertiary },
+
+  // Progress bar
+  progressTrack: {
+    height: 4, backgroundColor: Colors.surfaceAlt,
+    borderRadius: 2, overflow: 'hidden',
+  },
+  progressFill: {
+    height: 4, backgroundColor: Colors.accent, borderRadius: 2,
+  },
+  progressLabel: { fontSize: FontSize.xs, color: Colors.textTertiary },
+
+  // Exercise block
+  exBlock: {
+    borderTopWidth: 1, borderTopColor: Colors.border,
+    paddingTop: Spacing.sm, gap: 6,
+  },
+  exRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  exDot: {
+    width: 8, height: 8, borderRadius: 4,
+    backgroundColor: Colors.textTertiary,
+  },
+  exDotDone: { backgroundColor: Colors.accent },
+  exName: { flex: 1, fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: Colors.textPrimary },
+  exNameDone: { color: Colors.textTertiary },
+  exCheck: { color: Colors.accent, fontWeight: FontWeight.bold },
+
+  addExBtn: {
+    paddingVertical: 10, paddingHorizontal: 12,
+    borderRadius: Radius.sm, borderWidth: 1,
+    borderColor: Colors.border, borderStyle: 'dashed',
     alignItems: 'center',
-    backgroundColor: Colors.textPrimary,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-    gap: Spacing.sm,
   },
-  whatTodayEmoji: { fontSize: 24 },
-  whatTodayTitle: { color: Colors.white, fontWeight: FontWeight.semibold, fontSize: FontSize.md },
-  whatTodaySubtitle: { color: 'rgba(255,255,255,0.6)', fontSize: FontSize.xs },
-  whatTodayArrow: { color: Colors.white, fontSize: 24 },
-  section: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: Spacing.sm,
-  },
-  sectionTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.textPrimary },
-  planName: { fontSize: FontSize.sm, color: Colors.textSecondary },
-  sessionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  sessionMeta: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: 2 },
-  exerciseBlock: { gap: 6 },
-  exerciseRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    marginTop: 4,
-    paddingTop: 8,
-  },
-  exerciseRowDone: { opacity: 0.6 },
-  exerciseName: { fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: Colors.textPrimary, flex: 1 },
-  doneCheck: { color: Colors.gym, fontWeight: FontWeight.bold, fontSize: FontSize.lg },
-  addPlanExBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderStyle: 'dashed',
-  },
-  addPlanExText: { color: Colors.textSecondary, fontSize: FontSize.sm },
+  addExText: { color: Colors.textSecondary, fontSize: FontSize.sm },
+
   startBtn: {
-    backgroundColor: Colors.textPrimary,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    alignItems: 'center',
+    backgroundColor: Colors.accent, borderRadius: Radius.md,
+    padding: Spacing.md, alignItems: 'center',
   },
-  startBtnText: { color: Colors.white, fontWeight: FontWeight.bold, fontSize: FontSize.md },
+  startBtnText: { color: Colors.black, fontWeight: FontWeight.bold, fontSize: FontSize.md },
+
   completeBtn: {
-    backgroundColor: Colors.gym,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    alignItems: 'center',
+    backgroundColor: Colors.glass,
+    borderWidth: 1, borderColor: Colors.accent,
+    borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center',
     marginTop: 4,
   },
-  completeBtnText: { color: Colors.white, fontWeight: FontWeight.bold, fontSize: FontSize.md },
-  completedSection: { backgroundColor: Colors.gymLight, borderColor: Colors.gym },
-  completedTitle: { fontSize: FontSize.xl, fontWeight: FontWeight.bold, color: Colors.gym },
-  completedSub: { color: Colors.gym, fontSize: FontSize.sm },
-  noplan: {
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
-    padding: Spacing.xl,
-    marginBottom: Spacing.md,
-    gap: 4,
+  completeBtnText: { color: Colors.accent, fontWeight: FontWeight.bold, fontSize: FontSize.md },
+
+  completedCard: {
+    borderRadius: Radius.lg, padding: Spacing.md,
+    marginBottom: Spacing.md, gap: 4,
+    borderWidth: 1, borderColor: Colors.glassBorder,
   },
-  noplanEmoji: { fontSize: 32 },
-  noplanText: { fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: Colors.textPrimary },
-  noplanSub: { fontSize: FontSize.sm, color: Colors.textSecondary },
-  lazyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-    gap: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  completedTitle: { fontSize: FontSize.xl, fontWeight: FontWeight.bold, color: Colors.accent },
+  completedSub: { color: Colors.textSecondary, fontSize: FontSize.sm },
+
+  emptyCard: {
+    alignItems: 'center', backgroundColor: Colors.surface,
+    borderRadius: Radius.lg, padding: Spacing.xl,
+    marginBottom: Spacing.md, gap: 6,
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  emptyEmoji: { fontSize: 36 },
+  emptyTitle: { fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: Colors.textPrimary },
+  emptySub: { fontSize: FontSize.sm, color: Colors.textTertiary, textAlign: 'center' },
+
+  lazyCard: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: Colors.surface, borderRadius: Radius.lg,
+    padding: Spacing.md, marginBottom: Spacing.md,
+    gap: Spacing.sm, borderWidth: 1, borderColor: Colors.border,
   },
   lazyEmoji: { fontSize: 28 },
-  lazyTitle: { fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: Colors.textPrimary, flex: 1 },
-  lazySub: { fontSize: FontSize.xs, color: Colors.textSecondary },
+  lazyTitle: { fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: Colors.textPrimary },
+  lazySub: { fontSize: FontSize.xs, color: Colors.textTertiary },
+
+  // Modals
   modal: { flex: 1, backgroundColor: Colors.background },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.border,
   },
   modalTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.textPrimary },
-  modalClose: { fontSize: FontSize.md, color: Colors.textPrimary, fontWeight: FontWeight.medium },
+  modalClose: { fontSize: FontSize.md, color: Colors.accent, fontWeight: FontWeight.semibold },
   reasonBox: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
+    backgroundColor: Colors.surface, borderRadius: Radius.md,
+    padding: Spacing.md, marginBottom: Spacing.md,
+    borderWidth: 1, borderColor: Colors.border,
   },
   reasonText: { fontSize: FontSize.md, color: Colors.textSecondary, lineHeight: 22 },
-  suggestLabel: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: Colors.textPrimary, marginBottom: Spacing.sm },
-  lazyDesc: {
-    fontSize: FontSize.md,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-  },
+  sectionLabel: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: Colors.textPrimary, marginBottom: Spacing.sm },
 });
