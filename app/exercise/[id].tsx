@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
   secondary: { fontSize: FontSize.sm, color: Colors.textSecondary, textTransform: 'capitalize' },
   statsRow: { flexDirection: 'row', gap: Spacing.sm },
   stat: {
-    flex: 1, backgroundColor: Colors.white, borderRadius: Radius.sm,
+    flex: 1, backgroundColor: Colors.surfaceAlt, borderRadius: Radius.sm,
     padding: Spacing.md, alignItems: 'center', gap: 2,
   },
   statVal: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold, color: Colors.textPrimary },

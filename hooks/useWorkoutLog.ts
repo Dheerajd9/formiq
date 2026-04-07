@@ -103,8 +103,8 @@ export function useWorkoutLog(date: string = today()) {
   const startWorkout = useCallback((workoutType = 'gym') => {
     const db = getDB();
     db.runSync(
-      'INSERT OR IGNORE INTO workout_logs (date, workout_type) VALUES (?, ?)',
-      [date, workoutType]
+      'INSERT OR IGNORE INTO workout_logs (date, workout_type, started_at) VALUES (?, ?, ?)',
+      [date, workoutType, new Date().toISOString()]
     );
     load();
   }, [date, load]);
@@ -189,11 +189,12 @@ export function useWorkoutLog(date: string = today()) {
           'SELECT weight_kg FROM personal_records WHERE exercise_id = ?', [ex.exercise_id]
         );
         if (!existing || ex.max_weight > existing.weight_kg) {
+          const achievedAt = new Date().toISOString().split('T')[0];
           db.runSync(
             `INSERT INTO personal_records (exercise_id, weight_kg, reps, achieved_at)
-             VALUES (?, ?, ?, date('now'))
-             ON CONFLICT(exercise_id) DO UPDATE SET weight_kg = ?, reps = ?, achieved_at = date('now')`,
-            [ex.exercise_id, ex.max_weight, ex.reps, ex.max_weight, ex.reps]
+             VALUES (?, ?, ?, ?)
+             ON CONFLICT(exercise_id) DO UPDATE SET weight_kg = ?, reps = ?, achieved_at = ?`,
+            [ex.exercise_id, ex.max_weight, ex.reps, achievedAt, ex.max_weight, ex.reps, achievedAt]
           );
         }
       }

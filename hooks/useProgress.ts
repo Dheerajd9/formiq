@@ -95,7 +95,7 @@ export function useProgress() {
     );
 
     // Muscle group frequency (when was each group last trained)
-    const muscleGroups = ['chest', 'back', 'shoulders', 'arms', 'core', 'legs', 'cardio'];
+    const muscleGroups = ['chest', 'back', 'lats', 'shoulders', 'biceps', 'triceps', 'core', 'quads', 'hamstrings', 'glutes', 'calves'];
     const frequencies: MuscleFrequency[] = muscleGroups.map((mg) => {
       // Find exercises in this muscle group that were completed recently
       const exerciseIds = EXERCISES.filter((e) => e.muscle_group === mg).map((e) => e.id);

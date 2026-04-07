@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.md,
   },
   section: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     marginBottom: Spacing.md,

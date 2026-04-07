@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
   detailSecondary: { fontSize: FontSize.sm, color: Colors.textSecondary, textTransform: 'capitalize' },
   detailStats: { flexDirection: 'row', gap: Spacing.sm },
   statBox: {
-    flex: 1, backgroundColor: Colors.white, borderRadius: Radius.sm,
+    flex: 1, backgroundColor: Colors.surfaceAlt, borderRadius: Radius.sm,
     padding: Spacing.md, alignItems: 'center', gap: 2,
   },
   statValue: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold, color: Colors.textPrimary },

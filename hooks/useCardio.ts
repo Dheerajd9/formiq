@@ -75,9 +75,9 @@ export function useCardio(date: string = today()) {
     const speed = avgSpeedKmh ?? (durationMinutes > 0 ? (distanceKm / durationMinutes) * 60 : 0);
     const calories = estimateCalories(type, durationMinutes, distanceKm);
     db.runSync(
-      `INSERT INTO cardio_logs (date, type, distance_km, duration_minutes, avg_speed_kmh, calories, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [date, type, distanceKm, durationMinutes, speed, calories, notes ?? '']
+      `INSERT INTO cardio_logs (date, type, distance_km, duration_minutes, avg_speed_kmh, calories, notes, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [date, type, distanceKm, durationMinutes, speed, calories, notes ?? '', new Date().toISOString()]
     );
     load();
   }, [date, load]);
