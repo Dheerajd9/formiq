@@ -10,5 +10,11 @@
   ],
   "buildCommand": "npx expo export --platform web",
   "outputDirectory": "dist",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "crons": [
+    {
+      "path": "/api/cron/check-reminders",
+      "schedule": "0 13 * * *"
+    }
+  ]
 }
