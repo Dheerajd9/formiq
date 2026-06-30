@@ -95,6 +95,15 @@ export function initDB() {
       notes TEXT DEFAULT '',
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS vocab_progress (
+      word_id TEXT PRIMARY KEY,
+      status TEXT DEFAULT 'new',
+      review_count INTEGER DEFAULT 0,
+      correct_count INTEGER DEFAULT 0,
+      is_favorite INTEGER DEFAULT 0,
+      last_reviewed TEXT DEFAULT NULL
+    );
   `);
 }
 

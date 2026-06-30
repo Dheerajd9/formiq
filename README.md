@@ -54,6 +54,13 @@ All your data lives in your browser. Nothing is sent anywhere.
 - **Plate Calculator** — enter target weight, see exactly which plates to load on an Olympic bar (kg/lb toggle, color-coded visual)
 - **1RM Calculator** — Epley formula, shows training zones (Max / Strength / Hypertrophy / Endurance) with % and rep ranges
 
+### French Vocab (Learn & Remember)
+- **223 French words** across 14 categories — greetings, numbers, family, food, colors, time/days, verbs, travel, body, weather, adjectives, questions, house objects, animals
+- Every word shows the **French spelling**, an **English-friendly phonetic reading** (e.g. *Bonjour → bohn-ZHOOR*), and the **English meaning** — plus example sentences for key words
+- **Flashcard Practice mode** — tap to reveal the meaning, mark "I knew it" / "Still learning"; words auto-graduate New → Learning → Known after 3 correct answers in a row, and wrong answers send them back into rotation
+- **Favorites** — star any word to build a custom review list
+- Progress is saved per word (status, review count, last reviewed) and persists offline, same as the rest of FormIQ's data
+
 ### Progress & Stats
 - **12-week activity heat map** — GitHub-style, color by workout type
 - Streak counter + weekly/monthly consistency %
@@ -108,7 +115,9 @@ formiq/
 │   ├── RestTimer.tsx           # Floating rest timer between sets
 │   ├── SetLogger.tsx           # Set/rep/weight input row
 │   ├── StepCounter.tsx         # Accelerometer step counter card
-│   └── StretchRoutineModal.tsx # Stretch picker + step-by-step coach
+│   ├── StretchRoutineModal.tsx # Stretch picker + step-by-step coach
+│   ├── VocabCard.tsx           # French word list card (favorite + status)
+│   └── VocabFlashcard.tsx      # Flip-to-reveal flashcard for Practice mode
 │
 ├── hooks/
 │   ├── useCardio.ts           # Cardio CRUD + totals
@@ -116,6 +125,7 @@ formiq/
 │   ├── useProgress.ts         # Stats, heat map, PRs, muscle frequency
 │   ├── useRecovery.ts         # Muscle recovery status
 │   ├── useStepCounter.ts      # Accelerometer pedometer
+│   ├── useVocab.ts            # French vocab progress (status, favorites, quiz scoring)
 │   ├── useWhatToday.ts        # Smart workout suggestion
 │   └── useWorkoutLog.ts       # Daily log session CRUD
 │
@@ -125,6 +135,7 @@ formiq/
 │
 └── constants/
     ├── exercises.ts            # 80+ exercises, muscle groups, equipment
+    ├── frenchVocab.ts           # 223 French words: spelling, phonetics, meaning
     ├── stretches.ts            # 15 stretches, 5 routines
     └── theme.ts                # Dark mode design tokens
 ```
@@ -155,6 +166,10 @@ cardio_logs: id, date, type, distance_km, duration_minutes,
 -- PRs and settings
 personal_records: id, exercise_id, weight_kg, reps, achieved_at
 user_settings: id, goal, gym_days_per_week, accent_color, notification_time, onboarding_done
+
+-- French vocab (words are static, bundled in constants/frenchVocab.ts)
+vocab_progress: word_id, status (new/learning/known), review_count,
+                correct_count, is_favorite, last_reviewed
 ```
 
 ---
@@ -167,6 +182,8 @@ user_settings: id, goal, gym_days_per_week, accent_color, notification_time, onb
 4. Tap **Add**
 
 FormIQ appears on your home screen like a native app. Works fully offline after first load.
+
+Once installed, tap the **🇫🇷 French** tab to browse vocabulary by category, search, star favorites, and run **Practice** sessions — your progress is saved on-device and survives closing the app, just like your workout data.
 
 ---
 
