@@ -16,10 +16,16 @@ on:
     - cron: '10 0 * * *'    # 7:10 PM CDT
     - cron: '10 1 * * *'    # 8:10 PM CDT  /  7:10 PM CST
     - cron: '10 2 * * *'    # 9:10 PM CDT  /  8:10 PM CST
-    - cron: '10 3 * * *'    # 10:10 PM CDT /  9:10 PM CST
+    - cron: '10 3 * * *'    # 10:10 PM CDT /  9:30 PM CST
     - cron: '10 4 * * *'    # 10:10 PM CST
 
-  workflow_dispatch:  # allow manual trigger from GitHub UI
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/french-reminders.yml'
+      - 'french-reminders/**'
+
+  workflow_dispatch:
 
 jobs:
   send-reminder:
@@ -28,15 +34,37 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # On push or manual trigger: send a confirmation message via curl (fast, no Python needed)
+      - name: Send confirmation message (push/dispatch only)
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "parse_mode=HTML" \
+            --data-urlencode "text=✅ French Class Reminder Bot is active!
+
+Automatic reminders are running on GitHub Actions.
+You will get a Telegram message 20 minutes before every class. 🇫🇷
+
+Schedule: Rithika Maam A1 Level (Videos 2-14)
+Timezone: CST/CDT (Texas)"
+
+      # On schedule: check time and send reminder if class is coming up
       - name: Set up Python
+        if: github.event_name == 'schedule'
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install dependencies
+        if: github.event_name == 'schedule'
         run: pip install requests pytz
 
-      - name: Send reminder if class is coming up
+      - name: Send class reminder
+        if: github.event_name == 'schedule'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
