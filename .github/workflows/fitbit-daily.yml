@@ -1,0 +1,57 @@
+name: Fitbit Daily Health Summary
+
+on:
+  schedule:
+    # 7:00 AM IST = 01:30 UTC (IST has no DST, so one entry is enough).
+    # GitHub cron can start late under load; the script always reports on
+    # "yesterday in IST" so a delayed start still sends the right day.
+    - cron: '30 1 * * *'
+
+  workflow_dispatch:
+
+permissions:
+  contents: write   # to commit data/health_log.csv back to the repo
+
+concurrency:
+  group: fitbit-daily
+  cancel-in-progress: false
+
+jobs:
+  send-summary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Fetch summary and send to Telegram
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+          # Reuses the same bot + chat as the French reminders workflow.
+          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python fitbit-bot/daily_summary.py
+
+      - name: Commit health log
+        run: |
+          if git status --porcelain fitbit-bot/data/ | grep -q .; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add fitbit-bot/data/
+            git commit -m "Log health summary for $(date -u -d yesterday +%F) [skip ci]"
+            git pull --rebase origin "${{ github.ref_name }}"
+            git push origin "${{ github.ref_name }}"
+          else
+            echo "No new log data to commit."
+          fi

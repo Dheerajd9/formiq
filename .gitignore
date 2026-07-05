@@ -41,3 +41,4 @@ french-reminders/.env
 /ios
 /android
 .vercel
+__pycache__/
